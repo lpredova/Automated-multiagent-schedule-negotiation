@@ -6,8 +6,12 @@ import time
 from time import sleep
 import threading
 
-
+# #####################################
+# #####################################
 # organizator
+# #####################################
+# #####################################
+
 class OrganizatorAgent(spade.Agent.Agent):
     class Ponasanje(spade.Behaviour.Behaviour):
         def onStart(self):
@@ -19,78 +23,187 @@ class OrganizatorAgent(spade.Agent.Agent):
 
             # print "\n Agent "+ self.getName() + " is online"
 
-            #self.end()
+            # self.end()
 
         def unesiVrijeme(self):
             self.vrijeme = input("Vrijeme:")
 
     class SendMessage(spade.Behaviour.OneShotBehaviour):
         def _process(self):
-            # First, form the receiver AID
-            primatelj = spade.AID.aid(name="agent_klijent2@127.0.0.1",
-                                     addresses=["xmpp://agent_klijent2@127.0.0.1"])
 
-            # Second, build the message
-            self.msg = spade.ACLMessage.ACLMessage()  # Instantiate the message
-            self.msg.setPerformative("inform")  # Set the "inform" FIPA performative
-            self.msg.setOntology("test")  # Set the ontology of the message content
-            self.msg.setLanguage("Hrvatski")  # Set the language of the message content
-            self.msg.addReceiver(primatelj)  # Add the message receiver
-            self.msg.setContent("Hello World")  # Set the message content
-            self.myAgent.send(self.msg)
 
-            print "poslao sam poruku !"
+            vrijeme = self.odrediVrijemeSastanka()
+            self.posaljiPorukuAgentima(vrijeme)
+
+            threading.Semaphore().release();
+
+        def odrediVrijemeSastanka(self):
+            vrijeme = raw_input("Unesi vrijeme sastanka:")
+            return vrijeme
+
+
+        # saljemo povratnu poruku svakom agentu o vremenu koje zelimo za sastanak
+        def posaljiPorukuAgentima(self,vrijeme):
+            print "Slanje vremena agentima klijentima ..."
+
+            i = 1
+            while (i < 5):
+                i += 1
+                klijent = "agent_klijent%i@127.0.0.1" % (i)
+                adresa = "xmpp://" + klijent
+
+                primatelj = spade.AID.aid(name=klijent,
+                                          addresses=[adresa])
+
+                # Second, build the message
+                self.msg = spade.ACLMessage.ACLMessage()  # Instantiate the message
+                self.msg.setPerformative("inform")  # Set the "inform" FIPA performative
+                self.msg.setOntology("termin_sastanka")  # Set the ontology of the message content
+                self.msg.setLanguage("Hrvatski")  # Set the language of the message content
+                self.msg.addReceiver(primatelj)  # Add the message receiver
+                self.msg.setContent(vrijeme)  # Set the message content
+                self.myAgent.send(self.msg)
+
+                print "\nposlao sam poruku agentu klijentu " + klijent + " !"
+
+                time.sleep(2)
+            if vrijeme=="stop":
+                self.MyAgent._kill
+                print "Agent organizator se gasi..."
+
+
+    # ##Primanje poruke
+    class PovratnePoruke(spade.Behaviour.Behaviour):
+        def _process(self):
+            self.msg = None
+            self.msg = self._receive(True,10)
+            if self.msg:
+                print "\nJa sam Agent Organizator " + self.name + "Primio sam poruku povratnu poruku %s!" % self.msg.content
+
+                if self.msg.content == "ok":
+                    print "postignuli smo dogovor"
+                else:
+                    print "nema dogovora"
+
+
+            else:
+                print "Čekao sam ali nema poruke"
 
 
     def _setup(self):
+        # definiramo moguća ponašanja agenta organizatora
+
+        time.sleep(5)
         p = self.Ponasanje()
-        m = self.SendMessage()
+        posalji_poruku = self.SendMessage()
         print "\n Agent\t" + self.getName() + " is online"
 
+
+
+        #šaljemo poruke o terminu agentima
+        self.addBehaviour(posalji_poruku, None);
         self.addBehaviour(p, None)
 
-        time.sleep(7)
-        self.addBehaviour(m, None);
+
+        ##test--> radi
+        #povratne = self.PovratnePoruke()
+        #self.setDefaultBehaviour( povratne )
 
 
+
+        #time.sleep(20)
+        ###Prihvaćanje poruke sa predloškom - ontologija
+        feedback_template = spade.Behaviour.ACLTemplate()
+        feedback_template.setOntology("povratna_informacija")
+        mt = spade.Behaviour.MessageTemplate(feedback_template)
+        povratne = self.PovratnePoruke()
+        self.addBehaviour(povratne, mt)
+        #threading.Semaphore(5)
+
+
+# #####################################
+# #####################################
 # Agent klijent
+# #####################################
+# #####################################
 class KlijentAgent(spade.Agent.Agent):
-    class Ponasanje(spade.Behaviour.Behaviour):
+    '''class Ponasanje(spade.Behaviour.Behaviour):
         def onStart(self):
             self.counter = 0
 
         def _process(self):
-            time.sleep(10)
+
             # print "Brojač " + self.name + ":", self.counter
-            #self.counter = self.counter + 1
+            self.counter = self.counter + 1
 
             #if (self.counter > 1):
             #    self.end();
-            #self.end()
+            #self.end()'''
 
-    ###Primanje poruke
+    # ##Primanje poruke
 
-    class SvePoruke( spade.Behaviour.Behaviour ):
-            def _process( self ):
-                self.msg = None
-                self.msg = self._receive( True, 10 )
-                if self.msg:
-                    print "Ja sam " + self.name + "Primio sam poruku %s!"%self.msg.content
+    class PrimiTerminSastanka(spade.Behaviour.Behaviour):
+        def _process(self):
+            self.msg = None
+            self.msg = self._receive(True)
+            if self.msg:
+                print "Ja sam agent klijent " + self.name + "Primio sam poruku %s!" % self.msg.content
+
+
+                #terminating agents after done job
+                if self.msg.content=="stop":
+                    print "Agent "+ self.getName() + " se gasi."
+                    self.MyAgent._kill()
+
                 else:
-                    print "Čekao sam ali nema poruke"
+                    rezultat = self.evaluirajPrijedlog()
+                    self.posaljiOdgovor(rezultat)
 
 
+            else:
+                print "Čekao sam ali nema poruke"
+
+        def evaluirajPrijedlog(self):
+            print "evaluiram..."
+            return "ok"
+
+        def posaljiOdgovor(self,rezultat):
+
+            # First, form the receiver AID
+            primatelj = spade.AID.aid(name="agent_organizator@127.0.0.1",
+                                      addresses=["xmpp://agent_organizator@127.0.0.1"])
+
+            # Second, build the message -> this šljaka
+            self.msg = spade.ACLMessage.ACLMessage()  # Instantiate the message
+            self.msg.setPerformative("inform")  # Set the "inform" FIPA performative
+            self.msg.setOntology("povratna_informacija")  # Set the ontology of the message content
+            self.msg.setLanguage("Hrvatski")  # Set the language of the message content
+            self.msg.addReceiver(primatelj)  # Add the message receiver
+            self.msg.setContent(rezultat)  # Set the message content
+
+            #print self.msg
+            self.myAgent.send(self.msg)
+
+            print "\nposlao sam poruku agentu organizatoru!"
 
 
+    ### Definiranje mogućih ponašanja agenta
     def _setup(self):
-        p = self.Ponasanje()
-        prihvati_poruku = self.SvePoruke()
+
 
         print "\n Agent\t" + self.getName() + " is online"
-        self.addBehaviour(p, None)
 
+
+        #p = self.Ponasanje()
+        #self.addBehaviour(p, None)
         time.sleep(15)
-        self.setDefaultBehaviour(prihvati_poruku)
+        ###Prihvaćanje poruke sa predloškom - ontologija
+
+        feedback_template = spade.Behaviour.ACLTemplate()
+        feedback_template.setOntology("termin_sastanka")
+        mt = spade.Behaviour.MessageTemplate(feedback_template)
+        termin = self.PrimiTerminSastanka()
+        self.addBehaviour(termin, mt)
 
 
 # ########################################
@@ -110,22 +223,24 @@ def inicijalizirajAgentaKlijenta(i):
     k = KlijentAgent(ip, korisnik)
     k.start()
 
-
+# ########################################
 if __name__ == '__main__':
     print "Program počinje..."
+
+    emafor = threading.Semaphore(value=5)
 
     for i in range(1, 6):
         # inicijalizacija dretve agenta organizatora
         if (i == 1):
             try:
-                threading.Thread(target=inicijalizirajAgentaOrganizatora(i), args=(i)).start()
+                thread1 = threading.Thread(target=inicijalizirajAgentaOrganizatora(i), args=(i)).start()
             except:
                 print "\nGreška prilikom inicijalizacije agenta organizatora !"
 
         # inicijalizacija agenata klijenata
         else:
             try:
-                threading.Thread(target=inicijalizirajAgentaKlijenta(i), args=(i)).start()
+                thread2 = threading.Thread(target=inicijalizirajAgentaKlijenta(i), args=(i)).start()
             except:
                 print "\nGreška prilikom inicijalizacije agenta klijenta %i!" % (i)
 
