@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import sys
 import spade
 import time
+import json
 from time import sleep
 import threading
+from GoogleCalendarApi import GoogleCalendar
 
 # #####################################
 # #####################################
@@ -21,28 +24,63 @@ class OrganizatorAgent(spade.Agent.Agent):
         def _process(self):
             time.sleep(5)
 
-            # print "\n Agent "+ self.getName() + " is online"
-
-            # self.end()
-
         def unesiVrijeme(self):
             self.vrijeme = input("Vrijeme:")
 
     class SendMessage(spade.Behaviour.OneShotBehaviour):
+
+        #Metoda kojom primamo formatirano vrijeme koje je korisnik unio te ga šaljemo agentima
+        #Sadrzi mali izbornik u kojem mozemo odabrati zelimo li unijeti vrijeme sastanka ili prekinuti pregovore
         def _process(self):
+            odaberi = "3"
+            while(odaberi != "1" and odaberi !="2"):
+                odaberi = raw_input("########\nAgent organizator\n1)Predlozi sastanak\n2)Odustani od pregovaranja\n\nOdaberi:")
 
+                if(odaberi == "1"):
+                    vrijeme = self.odrediVrijemeSastanka()
+                    self.posaljiPorukuAgentima(vrijeme)
 
-            vrijeme = self.odrediVrijemeSastanka()
-            self.posaljiPorukuAgentima(vrijeme)
+                if(odaberi == "2"):
+                    print "Agent organizator se gasi..."
+                    self.posaljiPorukuAgentima("stop")
+                    self.MyAgent._kill
 
             threading.Semaphore().release();
 
+
+
+        #Određujemo početno vrijeme i formatiramo ga prema Googleovom API-i
+        #primjer google-ovog formata
+        #2008-03-07T17:06:02.000Z so that's YYYY-MM-DDTHH:MM:SS.MMMZ
         def odrediVrijemeSastanka(self):
-            vrijeme = raw_input("Unesi vrijeme sastanka:")
-            return vrijeme
+
+            #Pocetno vrijeme
+            print "\nUnesi pocetno vrijeme dogadjaja...\n"
+            godina_pocetak = raw_input("pocetna godina (yyyy)   : ")
+            mjesec_pocetak = raw_input("pocetni mjesec (mm)     :")
+            dan_pocetak = raw_input("pocetni dan (dd)  :")
+            sat_pocetak = raw_input("pocetni sat (hh)   : ")
+            minute_pocetak = raw_input("pocetne minute (mm)     : ")
+
+            pocetno_vrijeme = godina_pocetak + "-" + mjesec_pocetak + "-" + dan_pocetak + "T"+sat_pocetak +":"+ minute_pocetak + ":00.000Z"
+
+            #Zavrsno vrijeme
+            print "\nUnesi zavrsno vrijeme dogadjaja...\n"
+            godina_kraj = raw_input("zavrsna godina (yyyy)      : ")
+            mjesec_kraj = raw_input("zavrsni mjesec (mm)        :")
+            dan_kraj = raw_input("zavrsni dan (dd)      : ")
+            sat_kraj = raw_input("zavrsni sat (hh)      : ")
+            minute_kraj = raw_input("zavrsne minute (mm)        : ")
+
+            zavrsno_vrijeme = godina_kraj + "-" + mjesec_kraj + "-" + dan_kraj + "T"+sat_kraj +":"+ minute_kraj + ":00.000Z"
+
+            vremena_sastanka =[pocetno_vrijeme,zavrsno_vrijeme]
+
+            return vremena_sastanka
 
 
-        # saljemo povratnu poruku svakom agentu o vremenu koje zelimo za sastanak
+        # saljemo povratnu poruku svakom agentu o vremenima za koje
+        # zelimo organizirati sastanak
         def posaljiPorukuAgentima(self,vrijeme):
             print "Slanje vremena agentima klijentima ..."
 
@@ -55,7 +93,6 @@ class OrganizatorAgent(spade.Agent.Agent):
                 primatelj = spade.AID.aid(name=klijent,
                                           addresses=[adresa])
 
-                # Second, build the message
                 self.msg = spade.ACLMessage.ACLMessage()  # Instantiate the message
                 self.msg.setPerformative("inform")  # Set the "inform" FIPA performative
                 self.msg.setOntology("termin_sastanka")  # Set the ontology of the message content
@@ -67,24 +104,47 @@ class OrganizatorAgent(spade.Agent.Agent):
                 print "\nposlao sam poruku agentu klijentu " + klijent + " !"
 
                 time.sleep(2)
-            if vrijeme=="stop":
-                self.MyAgent._kill
-                print "Agent organizator se gasi..."
 
 
-    # ##Primanje poruke
+    # Primanje poruke uspješnosti pregovaranja od agenata klijenata
     class PovratnePoruke(spade.Behaviour.Behaviour):
+
+        brojac_odgovora = 0
+        odgovori=[]
+
         def _process(self):
             self.msg = None
             self.msg = self._receive(True,10)
             if self.msg:
-                print "\nJa sam Agent Organizator " + self.name + "Primio sam poruku povratnu poruku %s!" % self.msg.content
+                        self.brojac_odgovora +=1
+                        print self.brojac_odgovora
 
-                if self.msg.content == "ok":
-                    print "postignuli smo dogovor"
-                else:
-                    print "nema dogovora"
+                        self.odgovori.append(self.msg.content)
 
+                        print self.odgovori
+
+                        if(self.brojac_odgovora%4==0):
+                            print "primio sam sve"
+                            for x in self.odgovori:
+
+                                self.brojac_odgovora-=1
+
+                                if x!= "ok":
+                                    print "\nNema dogovora"
+
+                                    #ToDo -> nova runda, poziv metode izbornika rjesiti
+                                    #resetiramo lokalne varijable klase agenta organizatora
+                                    self.brojac_odgovora = 0
+                                    del self.odgovori[:]
+
+                                    print "pobrisao sam varijable"
+
+
+                                    #OrganizatorAgent.SendMessage._process()
+                                if self.brojac_odgovora==0:
+                                    print "imamo deal"
+                                    #ToDo -> Srediti upisivanje u kalendar
+                                    #resetiramo lokalne varijable klase agenta organizatora
 
             else:
                 print "Čekao sam ali nema poruke"
@@ -98,20 +158,10 @@ class OrganizatorAgent(spade.Agent.Agent):
         posalji_poruku = self.SendMessage()
         print "\n Agent\t" + self.getName() + " is online"
 
-
-
         #šaljemo poruke o terminu agentima
         self.addBehaviour(posalji_poruku, None);
         self.addBehaviour(p, None)
 
-
-        ##test--> radi
-        #povratne = self.PovratnePoruke()
-        #self.setDefaultBehaviour( povratne )
-
-
-
-        #time.sleep(20)
         ###Prihvaćanje poruke sa predloškom - ontologija
         feedback_template = spade.Behaviour.ACLTemplate()
         feedback_template.setOntology("povratna_informacija")
@@ -122,9 +172,7 @@ class OrganizatorAgent(spade.Agent.Agent):
 
 
 # #####################################
-# #####################################
 # Agent klijent
-# #####################################
 # #####################################
 class KlijentAgent(spade.Agent.Agent):
     '''class Ponasanje(spade.Behaviour.Behaviour):
@@ -140,8 +188,8 @@ class KlijentAgent(spade.Agent.Agent):
             #    self.end();
             #self.end()'''
 
-    # ##Primanje poruke
-
+    # Metoda za primanje poruke od agenta organizatora te instanciramo klasu za
+    # kontaktiranje google calendar usluge te vraćamo agentu organizatoru odgovor
     class PrimiTerminSastanka(spade.Behaviour.Behaviour):
         def _process(self):
             self.msg = None
@@ -149,27 +197,39 @@ class KlijentAgent(spade.Agent.Agent):
             if self.msg:
                 print "Ja sam agent klijent " + self.name + "Primio sam poruku %s!" % self.msg.content
 
-
-                #terminating agents after done job
+                # Gasimo agenta
                 if self.msg.content=="stop":
                     print "Agent "+ self.getName() + " se gasi."
                     self.MyAgent._kill()
 
+                # Šaljemo početna i završna vremena google-u
                 else:
-                    rezultat = self.evaluirajPrijedlog()
+                    print "Kontaktiram Google Calendar ! "
+                    vremena =  self.msg.content.split("'")
+
+                    pocetno_vrijeme = vremena[1]
+                    zavrsno_vrijeme = vremena[3]
+
+                    rezultat = self.evaluirajPrijedlog(pocetno_vrijeme,zavrsno_vrijeme)
                     self.posaljiOdgovor(rezultat)
-
-
             else:
                 print "Čekao sam ali nema poruke"
 
-        def evaluirajPrijedlog(self):
-            print "evaluiram..."
-            return "ok"
+
+        # Metoda koja poziva klasu GoogleCalendar u kojoj kontaktiramo Google-Calendar-API
+        def evaluirajPrijedlog(self,pocetno_vrijeme,zavrsno_vrijeme):
+            print "Evaluiram prijedlog..."
+            calendar = GoogleCalendar("466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com","g7S6psNxN9tw7PmpILxIsxzw",'agent0.zavrsni@gmail.com')
+
+            if(calendar.main(pocetno_vrijeme,zavrsno_vrijeme)): return "ok"
+
+            else:
+                print "raspored zauzet"
+                return "fail"
+
 
         def posaljiOdgovor(self,rezultat):
 
-            # First, form the receiver AID
             primatelj = spade.AID.aid(name="agent_organizator@127.0.0.1",
                                       addresses=["xmpp://agent_organizator@127.0.0.1"])
 
@@ -180,11 +240,9 @@ class KlijentAgent(spade.Agent.Agent):
             self.msg.setLanguage("Hrvatski")  # Set the language of the message content
             self.msg.addReceiver(primatelj)  # Add the message receiver
             self.msg.setContent(rezultat)  # Set the message content
-
-            #print self.msg
             self.myAgent.send(self.msg)
 
-            print "\nposlao sam poruku agentu organizatoru!"
+            print "\nposlao sam poruku agentu organizatoru %s!"%(rezultat)
 
 
     ### Definiranje mogućih ponašanja agenta
@@ -197,8 +255,8 @@ class KlijentAgent(spade.Agent.Agent):
         #p = self.Ponasanje()
         #self.addBehaviour(p, None)
         time.sleep(15)
-        ###Prihvaćanje poruke sa predloškom - ontologija
 
+        #Prihvaćanje poruke sa predloškom - ontologija
         feedback_template = spade.Behaviour.ACLTemplate()
         feedback_template.setOntology("termin_sastanka")
         mt = spade.Behaviour.MessageTemplate(feedback_template)
@@ -207,7 +265,6 @@ class KlijentAgent(spade.Agent.Agent):
 
 
 # ########################################
-
 # metode za inicijalizaciju agenata
 def inicijalizirajAgentaOrganizatora(i):
     ip = "agent_organizator@127.0.0.%i" % (i)
@@ -243,6 +300,3 @@ if __name__ == '__main__':
                 thread2 = threading.Thread(target=inicijalizirajAgentaKlijenta(i), args=(i)).start()
             except:
                 print "\nGreška prilikom inicijalizacije agenta klijenta %i!" % (i)
-
-
-
