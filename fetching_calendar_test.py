@@ -16,6 +16,9 @@
 
 import httplib2
 import sys
+import datetime
+import time
+import json
 
 from apiclient.discovery import build
 from oauth2client.file import Storage
@@ -23,9 +26,11 @@ from oauth2client.client import AccessTokenRefreshError
 from oauth2client.client import OAuth2WebServerFlow
 from oauth2client.tools import run
 
+
+
 # For this example, the client id and client secret are command-line arguments.
-client_id = sys.argv[1]
-client_secret = sys.argv[2]
+client_id ="466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com" #sys.argv[1]
+client_secret = "g7S6psNxN9tw7PmpILxIsxzw" #sys.argv[2]
 
 # The scope URL for read/write access to a user's calendar data
 scope = 'https://www.googleapis.com/auth/'
@@ -57,25 +62,87 @@ def main():
         # have to execute the request in a paging loop. First, build the
         # request object. The arguments provided are:
         #   primary calendar for user
-        request = service.events().list(calendarId='primary')
+        #request = service.events().list(calendarId='primary')
 
-        conunter = 0;
+
+        #start
+        print "Unesi pocetno vrijeme dogadjaja...\n"
+
+        godina_pocetak = raw_input("pocetna godina (yyyy): ")
+        mjesec_pocetak = raw_input("pocetni mjesec (mm:")
+        dan_pocetak = raw_input("pocetni dan: (dd)")
+        sat_pocetak = raw_input("pocetni sat (hh): ")
+        minute_pocetak = raw_input("pocetne minute (mm): ")
+
+        pocetno_vrijeme =godina_pocetak + "-" + mjesec_pocetak + "-" + dan_pocetak + "T"+sat_pocetak +":"+ minute_pocetak + ":00.000Z"
+
+        #2008-03-07T17:06:02.000Z so that's YYYY-MM-DDTHH:MM:SS.MMMZ
+
+
+        #end
+        print "\nUnesi zavrsno vrijeme dogadjaja...\n"
+        godina_kraj = raw_input("zavrsna godina (yyyy): ")
+        mjesec_kraj = raw_input("zavrsni mjesec (mm):")
+        dan_kraj = raw_input("zavrsni dan (dd): ")
+        sat_kraj = raw_input("zavrsni sat (hh): ")
+        minute_kraj = raw_input("zavrsne minute (mm): ")
+
+        zavrsno_vrijeme =godina_kraj + "-" + mjesec_kraj + "-" + dan_kraj + "T"+sat_kraj +":"+ minute_kraj + ":00.000Z"
+
+        freebusy_query = {
+        "timeMin" : pocetno_vrijeme,#datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+        "timeMax" : zavrsno_vrijeme,#datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+        "timeZone": "GMT",
+        "items" :[
+          {
+            "id" : 'agent0.zavrsni@gmail.com'
+          }
+        ]
+      }
+
+        print freebusy_query
+
+        #2008-03-07T17:06:02.000Z so that's YYYY-MM-DDTHH:MM:SS.MMMZ
+
+        request = service.freebusy().query(body=freebusy_query)
+
+        counter = 0
 
         # Loop until all pages have been processed.
-        while request != None:
+        while request != None and counter<1:
             # Get the next page.
             response = request.execute()
             # Accessing the response like a dict object with an 'items' key
             # returns a list of item objects (events).
 
-            for event in response.get('items', []):
-                # The event object is a dict object with a 'summary' key.
-                print "pocetak " + repr(event.get('start', 'NO SUMMARY')) + '\n'
-                print "kraj " + repr(event.get('end', 'NO SUMMARY')) + '\n'
-                conunter+=1
-                print(conunter)
 
-                if (conunter > 3): exit()
+
+            print response
+            counter +=1
+            #response = response.translate(None,'u')
+            if(response['calendars']['agent0.zavrsni@gmail.com']!= None):
+                print "Ima nesto u rasporedu"
+                return 1
+            #podaci = json.load(response)
+
+            else :
+                print "Prazan raspored"
+                return 0
+
+
+
+
+
+
+
+            print response
+
+            '''for event in response.get('calendars', []):
+                # The event object is a dict object with a 'summary' key.
+
+                print repr(event.get('agent0.zavrsni@gmail.com'))
+                #print repr(event.get('groups', 'NO SUMMARY')) + '\n'
+            '''
 
 
 
