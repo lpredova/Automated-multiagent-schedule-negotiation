@@ -29,8 +29,25 @@ from oauth2client.tools import run
 
 
 # For this example, the client id and client secret are command-line arguments.
-client_id ="466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com" #sys.argv[1]
-client_secret = "g7S6psNxN9tw7PmpILxIsxzw" #sys.argv[2]
+
+#agent 0
+#client_id ="466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com"
+#client_secret = "g7S6psNxN9tw7PmpILxIsxzw"
+
+#agent 1
+#client_id ="969348362348-nfs15alf9velcc7dr5312cebijs66cp4.apps.googleusercontent.com"
+#client_secret = "8Zt_4PsA_JpGGnmFO1PDETj3"
+
+#agent 2
+#client_id ="111267856009-qj1ravtgqptrlpb9nl83at347vhkgkpd.apps.googleusercontent.com"
+#client_secret = "iehwQARcxZh0YUuzzxrJQxji"
+
+#agent 3
+client_id ="485027726364-fgf7ng6oa671uti4lhv0ugsccilgln97.apps.googleusercontent.com"
+client_secret = "d4UqsL3DF0sPZy2fxspKuvr_"
+
+
+
 
 # The scope URL for read/write access to a user's calendar data
 scope = 'https://www.googleapis.com/auth/'
@@ -95,7 +112,7 @@ def main():
         "timeZone": "GMT",
         "items" :[
           {
-            "id" : 'agent0.zavrsni@gmail.com'
+            "id" : 'agent03.zavrsni@gmail.com'
           }
         ]
       }
@@ -120,7 +137,7 @@ def main():
             print response
             counter +=1
             #response = response.translate(None,'u')
-            if(response['calendars']['agent0.zavrsni@gmail.com']!= None):
+            if(response['calendars']['agent03.zavrsni@gmail.com'] != []):
                 print "Ima nesto u rasporedu"
                 return 1
             #podaci = json.load(response)
