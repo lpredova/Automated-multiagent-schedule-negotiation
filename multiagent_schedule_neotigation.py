@@ -175,6 +175,11 @@ class OrganizatorAgent(spade.Agent.Agent):
 # Agent klijent
 # #####################################
 class KlijentAgent(spade.Agent.Agent):
+
+    google_client_id =""
+    google_client_secret = ""
+    google_client_username = ""
+
     '''class Ponasanje(spade.Behaviour.Behaviour):
         def onStart(self):
             self.counter = 0
@@ -191,6 +196,16 @@ class KlijentAgent(spade.Agent.Agent):
     # Metoda za primanje poruke od agenta organizatora te instanciramo klasu za
     # kontaktiranje google calendar usluge te vraćamo agentu organizatoru odgovor
     class PrimiTerminSastanka(spade.Behaviour.Behaviour):
+
+        google_client_id =""
+        google_client_secret = ""
+        google_client_username = ""
+
+        def setGoogleAccountPodatke(self,id,secret,user):
+            self.google_client_id = id
+            self.google_client_secret = secret
+            self.google_client_username = user
+
         def _process(self):
             self.msg = None
             self.msg = self._receive(True)
@@ -219,7 +234,9 @@ class KlijentAgent(spade.Agent.Agent):
         # Metoda koja poziva klasu GoogleCalendar u kojoj kontaktiramo Google-Calendar-API
         def evaluirajPrijedlog(self,pocetno_vrijeme,zavrsno_vrijeme):
             print "Evaluiram prijedlog..."
-            calendar = GoogleCalendar("466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com","g7S6psNxN9tw7PmpILxIsxzw",'agent0.zavrsni@gmail.com')
+
+            print self.google_client_id,self.google_client_secret,self.google_client_username
+            calendar = GoogleCalendar(self.google_client_id,self.google_client_secret,self.google_client_username)
 
             if(calendar.main(pocetno_vrijeme,zavrsno_vrijeme)): return "ok"
 
@@ -248,12 +265,8 @@ class KlijentAgent(spade.Agent.Agent):
     ### Definiranje mogućih ponašanja agenta
     def _setup(self):
 
-
         print "\n Agent\t" + self.getName() + " is online"
 
-
-        #p = self.Ponasanje()
-        #self.addBehaviour(p, None)
         time.sleep(15)
 
         #Prihvaćanje poruke sa predloškom - ontologija
@@ -262,6 +275,13 @@ class KlijentAgent(spade.Agent.Agent):
         mt = spade.Behaviour.MessageTemplate(feedback_template)
         termin = self.PrimiTerminSastanka()
         self.addBehaviour(termin, mt)
+        termin.setGoogleAccountPodatke(self.google_client_id,self.google_client_secret,self.google_client_username)
+
+
+    def setGoogleAccountPodatke(self,id,secret,user):
+            self.google_client_id = id
+            self.google_client_secret = secret
+            self.google_client_username = user
 
 
 # ########################################
@@ -286,18 +306,27 @@ def inicijalizirajAgentaKlijenta(i):
 
     #agent 2
     #client_id ="111267856009-qj1ravtgqptrlpb9nl83at347vhkgkpd.apps.googleusercontent.com"
-    #client_secret = "iehwQARcxZh0YUuzzxrJQxji"
+    #client_secret = "8Zt_4PsA_JpGGnmFO1PDETj3"
 
     #agent 3
     #client_id ="485027726364-fgf7ng6oa671uti4lhv0ugsccilgln97.apps.googleusercontent.com"
     #client_secret = "d4UqsL3DF0sPZy2fxspKuvr_"
 
-    
+    google_korisnici = {"2":["466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com","g7S6psNxN9tw7PmpILxIsxzw","agent0.zavrsni@gmail.com"],
+                        "3":["969348362348-nfs15alf9velcc7dr5312cebijs66cp4.apps.googleusercontent.com","8Zt_4PsA_JpGGnmFO1PDETj3","agent01.zavrsni@gmail.com"],
+                        "4":["111267856009-qj1ravtgqptrlpb9nl83at347vhkgkpd.apps.googleusercontent.com","8Zt_4PsA_JpGGnmFO1PDETj3","agent02.zavrsni@gmail.com"],
+                        "5":["485027726364-fgf7ng6oa671uti4lhv0ugsccilgln97.apps.googleusercontent.com","d4UqsL3DF0sPZy2fxspKuvr_","agent03.zavrsni@gmail.com"]}
+
+    id = google_korisnici["%i"%(i)][0]
+    secret = google_korisnici["%i"%(i)][1]
+    user = google_korisnici["%i"%(i)][2]
+
 
     ip = "agent_klijent%i@127.0.0.1" % (i)
     korisnik = "klijent_0%i" % (i)
     k = KlijentAgent(ip, korisnik)
     k.start()
+    k.setGoogleAccountPodatke(id,secret,user)
 
 # ########################################
 if __name__ == '__main__':
