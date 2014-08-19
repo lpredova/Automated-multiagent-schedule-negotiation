@@ -52,6 +52,7 @@ class OrganizatorAgent(spade.Agent.Agent):
         #Određujemo početno vrijeme i formatiramo ga prema Googleovom API-i
         #primjer google-ovog formata
         #2008-03-07T17:06:02.000Z so that's YYYY-MM-DDTHH:MM:SS.MMMZ
+        #@staticmethod
         def odrediVrijemeSastanka(self):
 
             #Pocetno vrijeme
@@ -137,7 +138,9 @@ class OrganizatorAgent(spade.Agent.Agent):
                                     self.brojac_odgovora = 0
                                     del self.odgovori[:]
 
-                                    print "pobrisao sam varijable"
+                                    print "Nema dogovora ! ide nova runda"
+                                    message = OrganizatorAgent.SendMessage.odrediVrijemeSastanka()
+
 
 
                                     #OrganizatorAgent.SendMessage._process()
