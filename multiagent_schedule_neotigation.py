@@ -5,13 +5,18 @@ import spade
 import time
 import threading
 from GoogleCalendarApi import GoogleCalendar
+from spade.Agent import Agent
+from spade.Behaviour import OneShotBehaviour, EventBehaviour, ACLTemplate, MessageTemplate
 
 # #####################################
 # organizator
 # #####################################
 
-class OrganizatorAgent(spade.Agent.Agent):
-    class Ponasanje(spade.Behaviour.Behaviour):
+class OrganizatorAgent(Agent):
+
+
+
+    class Ponasanje(EventBehaviour):
         def onStart(self):
             self.counter = 0
             self.vrijeme = 0
@@ -20,10 +25,11 @@ class OrganizatorAgent(spade.Agent.Agent):
             time.sleep(5)
 
 
-    class SendMessage(spade.Behaviour.OneShotBehaviour):
+    class PosaljiPoruku(spade.Behaviour.OneShotBehaviour):
 
         def _process(self):
             self.prikaziIzbornik()
+
 
         def prikaziIzbornik(self):
             odaberi = "3"
@@ -39,7 +45,7 @@ class OrganizatorAgent(spade.Agent.Agent):
                     self.posaljiPorukuAgentima("stop")
                     self.MyAgent._kill
 
-        #@staticmethod
+
         def odrediVrijemeSastanka(self):
             '''
             Određujemo početno vrijeme i formatiramo ga prema Googleovom API-i
@@ -68,15 +74,17 @@ class OrganizatorAgent(spade.Agent.Agent):
             minute_kraj = raw_input("zavrsne minute (mm)        : ")
 
             zavrsno_vrijeme = godina_kraj + "-" + mjesec_kraj + "-" + dan_kraj + "T"+sat_kraj +":"+ minute_kraj + ":00.000Z"
-
             vremena_sastanka =[pocetno_vrijeme,zavrsno_vrijeme]
 
             return vremena_sastanka
 
-
-        # saljemo povratnu poruku svakom agentu o vremenima za koje
-        # zelimo organizirati sastanak
         def posaljiPorukuAgentima(self,vrijeme):
+            '''
+            saljemo povratnu poruku svakom agentu o vremenima za koje
+            zelimo organizirati sastanak
+            :param vrijeme:
+            :return:
+            '''
             print "Slanje vremena agentima klijentima ..."
 
             i = 1
@@ -150,11 +158,8 @@ class OrganizatorAgent(spade.Agent.Agent):
             else : return False
 
         def pokreniNoviKrugPregovora(self):
-            print "Ide novi krug"
-
-
-
-
+            print "trebao bih pokrenuti novi krug dogovora"
+            self.myAgent.prikaziIzbornik()
 
 
     def _setup(self):
@@ -162,7 +167,7 @@ class OrganizatorAgent(spade.Agent.Agent):
 
         time.sleep(5)
         p = self.Ponasanje()
-        posalji_poruku = self.SendMessage()
+        posalji_poruku = self.PosaljiPoruku()
         print "\n Agent\t" + self.getName() + " je aktivan"
 
         #šaljemo poruke o terminu agentima
@@ -181,7 +186,7 @@ class OrganizatorAgent(spade.Agent.Agent):
 # #####################################
 # Agent klijent
 # #####################################
-class KlijentAgent(spade.Agent.Agent):
+class KlijentAgent(Agent):
 
     google_client_id =""
     google_client_secret = ""
