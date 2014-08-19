@@ -74,22 +74,16 @@ class GoogleCalendar:
             while request != None :
                 response = request.execute()
 
-                '''
-                print self.client_name
-                print response
-                print response['calendars']
-                print response['calendars'][self.client_name]
-                print response['calendars'][self.client_name]['busy']
-                '''
-                print response
-                print response['calendars'][self.client_name]['busy']
+                #print self.client_name
+                #print response
+                #print response['calendars']
+                #print response['calendars'][self.client_name]
+                #print response['calendars'][self.client_name]['busy']
 
                 if(response['calendars'][self.client_name]['busy']== []):
-                    print "Raspored je slobodan"
                     return True
 
                 else :
-                    print "Raspored je zauzet"
                     return False
 
         except AccessTokenRefreshError:
@@ -98,9 +92,7 @@ class GoogleCalendar:
 
 
     def upisiTerminUKalendar(self):
+        print " ovdje cete upisivati detalje sastanka koje cemo onda ubacivati u google calendar"
+
+
         return True
-
-if __name__ == '__main__':
-    calendar = GoogleCalendar("466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com","g7S6psNxN9tw7PmpILxIsxzw",'agent0.zavrsni@gmail.com')
-    calendar.main()
-
