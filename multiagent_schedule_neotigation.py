@@ -1,18 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
 import spade
 import time
-import json
-from time import sleep
 import threading
 from GoogleCalendarApi import GoogleCalendar
 
 # #####################################
-# #####################################
 # organizator
-# #####################################
 # #####################################
 
 class OrganizatorAgent(spade.Agent.Agent):
@@ -24,14 +19,13 @@ class OrganizatorAgent(spade.Agent.Agent):
         def _process(self):
             time.sleep(5)
 
-        def unesiVrijeme(self):
-            self.vrijeme = input("Vrijeme:")
 
     class SendMessage(spade.Behaviour.OneShotBehaviour):
 
-        #Metoda kojom primamo formatirano vrijeme koje je korisnik unio te ga šaljemo agentima
-        #Sadrzi mali izbornik u kojem mozemo odabrati zelimo li unijeti vrijeme sastanka ili prekinuti pregovore
         def _process(self):
+            self.prikaziIzbornik()
+
+        def prikaziIzbornik(self):
             odaberi = "3"
             while(odaberi != "1" and odaberi !="2"):
                 odaberi = raw_input("########\nAgent organizator\n1)Predlozi sastanak\n2)Odustani od pregovaranja\n\nOdaberi:")
@@ -45,15 +39,15 @@ class OrganizatorAgent(spade.Agent.Agent):
                     self.posaljiPorukuAgentima("stop")
                     self.MyAgent._kill
 
-            threading.Semaphore().release();
-
-
-
-        #Određujemo početno vrijeme i formatiramo ga prema Googleovom API-i
-        #primjer google-ovog formata
-        #2008-03-07T17:06:02.000Z so that's YYYY-MM-DDTHH:MM:SS.MMMZ
         #@staticmethod
         def odrediVrijemeSastanka(self):
+            '''
+            Određujemo početno vrijeme i formatiramo ga prema Googleovom API-i
+            primjer google-ovog formata
+            2008-03-07T17:06:02.000Z so that's YYYY-MM-DDTHH:MM:SS.MMMZ
+
+            :return:
+            '''
 
             #Pocetno vrijeme
             print "\nUnesi pocetno vrijeme dogadjaja...\n"
@@ -133,24 +127,34 @@ class OrganizatorAgent(spade.Agent.Agent):
                                 if x!= "ok":
                                     print "\nNema dogovora"
 
-                                    #ToDo -> nova runda, poziv metode izbornika rjesiti
-                                    #resetiramo lokalne varijable klase agenta organizatora
                                     self.brojac_odgovora = 0
                                     del self.odgovori[:]
+                                    self.pokreniNoviKrugPregovora()
 
-                                    print "Nema dogovora ! ide nova runda"
-                                    message = OrganizatorAgent.SendMessage.odrediVrijemeSastanka()
-
-
-
-                                    #OrganizatorAgent.SendMessage._process()
                                 if self.brojac_odgovora==0:
-                                    print "imamo deal"
-                                    #ToDo -> Srediti upisivanje u kalendar
-                                    #resetiramo lokalne varijable klase agenta organizatora
+                                    if(self.upisiTerminUKalendar()): print "Upisano u riječnik"
+                                    else : print "Nije upisano"
 
             else:
                 print "Čekao sam ali nema poruke"
+
+        def upisiTerminUKalendar(self):
+            '''
+            Metoda koja poziva Google kalendar metodu za upis termina u imenik
+            :return:
+            '''
+
+            calendar = GoogleCalendar()
+            if(calendar.upisiTerminUKalendar()):
+                return True
+            else : return False
+
+        def pokreniNoviKrugPregovora(self):
+            print "Ide novi krug"
+
+
+
+
 
 
     def _setup(self):
@@ -159,7 +163,7 @@ class OrganizatorAgent(spade.Agent.Agent):
         time.sleep(5)
         p = self.Ponasanje()
         posalji_poruku = self.SendMessage()
-        print "\n Agent\t" + self.getName() + " is online"
+        print "\n Agent\t" + self.getName() + " je aktivan"
 
         #šaljemo poruke o terminu agentima
         self.addBehaviour(posalji_poruku, None);
@@ -268,7 +272,7 @@ class KlijentAgent(spade.Agent.Agent):
     ### Definiranje mogućih ponašanja agenta
     def _setup(self):
 
-        print "\n Agent\t" + self.getName() + " is online"
+        print "\n Agent\t" + self.getName() + " je aktivan"
 
         time.sleep(15)
 
@@ -298,23 +302,8 @@ def inicijalizirajAgentaOrganizatora(i):
 
 
 def inicijalizirajAgentaKlijenta(i):
-    #Podaci za autentifikaciju agenta na google cloudu
-    #agent 0
-    #client_id ="466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com"
-    #client_secret = "g7S6psNxN9tw7PmpILxIsxzw"
 
-    #agent 1
-    #client_id ="969348362348-nfs15alf9velcc7dr5312cebijs66cp4.apps.googleusercontent.com"
-    #client_secret = "8Zt_4PsA_JpGGnmFO1PDETj3"
-
-    #agent 2
-    #client_id ="111267856009-qj1ravtgqptrlpb9nl83at347vhkgkpd.apps.googleusercontent.com"
-    #client_secret = "8Zt_4PsA_JpGGnmFO1PDETj3"
-
-    #agent 3
-    #client_id ="485027726364-fgf7ng6oa671uti4lhv0ugsccilgln97.apps.googleusercontent.com"
-    #client_secret = "d4UqsL3DF0sPZy2fxspKuvr_"
-
+    #korisnicki podaci agenata klijenata za uslugu Google Calendar
     google_korisnici = {"2":["466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com","g7S6psNxN9tw7PmpILxIsxzw","agent0.zavrsni@gmail.com"],
                         "3":["969348362348-nfs15alf9velcc7dr5312cebijs66cp4.apps.googleusercontent.com","8Zt_4PsA_JpGGnmFO1PDETj3","agent01.zavrsni@gmail.com"],
                         "4":["111267856009-qj1ravtgqptrlpb9nl83at347vhkgkpd.apps.googleusercontent.com","8Zt_4PsA_JpGGnmFO1PDETj3","agent02.zavrsni@gmail.com"],

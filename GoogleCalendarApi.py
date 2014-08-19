@@ -37,19 +37,13 @@ class GoogleCalendar:
     scope = 'https://www.googleapis.com/auth/'
 
 
-    def __init__(self,cli_id, cli_secret,cli_name):
-      print "evaluacija krece..."
+    def __init__(self,cli_id=None, cli_secret=None,cli_name=None):
       self.client_id = cli_id
       self.client_secret = cli_secret
       self.client_name = cli_name
 
     def main(self,pocetno_vrijeme,zavrsno_vrijeme):
-        # For this example, the client id and client secret are command-line arguments.
-        #client_id ="466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com" #sys.argv[1]
-        #client_secret = "g7S6psNxN9tw7PmpILxIsxzw" #sys.argv[2]
-
-        # The scope URL for read/write access to a user's calendar data
-        #scope = 'https://www.googleapis.com/auth/'
+        print "evaluacija krece..."
 
         flow = OAuth2WebServerFlow(self.client_id, self.client_secret, self.scope)
 
@@ -87,6 +81,8 @@ class GoogleCalendar:
                 print response['calendars'][self.client_name]
                 print response['calendars'][self.client_name]['busy']
                 '''
+                print response
+                print response['calendars'][self.client_name]['busy']
 
                 if(response['calendars'][self.client_name]['busy']== []):
                     print "Raspored je slobodan"
@@ -98,6 +94,11 @@ class GoogleCalendar:
 
         except AccessTokenRefreshError:
             print ('The credentials have been revoked or expired, please re-run''the application to re-authorize')
+
+
+
+    def upisiTerminUKalendar(self):
+        return True
 
 if __name__ == '__main__':
     calendar = GoogleCalendar("466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com","g7S6psNxN9tw7PmpILxIsxzw",'agent0.zavrsni@gmail.com')
