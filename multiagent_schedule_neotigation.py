@@ -146,8 +146,6 @@ class OrganizatorAgent(Agent):
                 #ToDo  ovo u produkciji maknit da UX bude bolji
                 #time.sleep(2)
 
-
-
         def upisiTerminUKalendar(self):
             '''
             Metoda koja poziva Google kalendar metodu za upis termina u imenik
@@ -161,8 +159,6 @@ class OrganizatorAgent(Agent):
                 return True
             else:
                 return False
-
-
 
     def _setup(self):
         '''
@@ -187,7 +183,6 @@ class KlijentAgent(Agent):
     '''
     Agent klijent
     '''
-
 
     google_client_id = ""
     google_client_secret = ""
