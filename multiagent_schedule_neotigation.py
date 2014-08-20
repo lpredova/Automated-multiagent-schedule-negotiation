@@ -20,6 +20,9 @@ class OrganizatorAgent(Agent):
         Klasa za primanje poruke od agenata klijenata
         '''
 
+        pocetno_vrijeme = ""
+        zavrsno_vrijeme = ""
+
         izbornik_odabir = "0"
         brojac_odgovora = 0
         odgovori = []
@@ -28,17 +31,19 @@ class OrganizatorAgent(Agent):
             self.prikaziIzbornik()
 
             self.msg = None
-            self.msg = self._receive(True)
+            self.msg = self._receive(True,10)
             if self.msg:
+
+                print "primio sam poruku"
                 self.brojac_odgovora += 1
                 self.odgovori.append(self.msg.content)
 
                 print self.odgovori
-                if (self.brojac_odgovora % 4 == 0):
+                if self.brojac_odgovora % 4 == 0:
                     for x in self.odgovori:
                         self.brojac_odgovora -= 1
                         if self.brojac_odgovora == 0:
-                            if (self.upisiTerminUKalendar()):
+                            if self.upisiTerminUKalendar():
                                 print "Termin sastanka upisan u kalendar donji"
                                 #ToDo ovdje ovo pametnije rijesiti nekako
                                 self.izbornik_odabir ="0"
@@ -58,12 +63,14 @@ class OrganizatorAgent(Agent):
                             self.prikaziIzbornik()
 
             else:
-                print "Čekao sam ali nema poruke"
+                print self.msg
+                print "Agent organizator : Čekao sam ali nema poruke"
+                self.prikaziIzbornik()
 
         def prikaziIzbornik(self):
             while self.izbornik_odabir=="0":
                 self.izbornik_odabir = raw_input(
-                    "\nAgent organizator odabir " + self.izbornik_odabir + "\n1)Predlozi sastanak\n2)Odustani od pregovaranja\n\nOdaberi:")
+                    "\n1)Predlozi sastanak\n2)Odustani od pregovaranja\n\nOdabir:")
 
                 if self.izbornik_odabir == "1":
                     self.brojac_odgovora = 0
@@ -103,13 +110,13 @@ class OrganizatorAgent(Agent):
             sat_kraj = raw_input("zavrsni sat (hh)      : ")
             minute_kraj = raw_input("zavrsne minute (mm)        : ")
 
-            pocetno_vrijeme = godina_pocetak + "-" + mjesec_pocetak + "-" + dan_pocetak + "T" + sat_pocetak + ":" + minute_pocetak + ":00.000Z"
-            zavrsno_vrijeme = godina_kraj + "-" + mjesec_kraj + "-" + dan_kraj + "T" + sat_kraj + ":" + minute_kraj + ":00.000Z"
-            vremena_sastanka = [pocetno_vrijeme, zavrsno_vrijeme]
+            self.pocetno_vrijeme = godina_pocetak + "-" + mjesec_pocetak + "-" + dan_pocetak + "T" + sat_pocetak + ":" + minute_pocetak + ":00.000Z"
+            self.zavrsno_vrijeme = godina_kraj + "-" + mjesec_kraj + "-" + dan_kraj + "T" + sat_kraj + ":" + minute_kraj + ":00.000Z"
+            vremena_sastanka = [self.pocetno_vrijeme, self.zavrsno_vrijeme]
 
             return vremena_sastanka
 
-        def posaljiPorukuAgentima(self, vrijeme):
+        def posaljiPorukuAgentima(self, poruka):
             '''
             saljemo povratnu poruku svakom agentu o vremenima za koje
             zelimo organizirati sastanak
@@ -131,7 +138,7 @@ class OrganizatorAgent(Agent):
                 self.msg.setOntology("termin_sastanka")
                 self.msg.setLanguage("Hrvatski")
                 self.msg.addReceiver(primatelj)
-                self.msg.setContent(vrijeme)
+                self.msg.setContent(poruka)
                 self.myAgent.send(self.msg)
 
                 print "\nposlao sam poruku agentu klijentu " + klijent + " !"
@@ -149,7 +156,8 @@ class OrganizatorAgent(Agent):
 
             print "Sastanak uspješno dogovoren...\nUnosim u kalendar..."
             calendar = GoogleCalendar()
-            if (calendar.upisiTerminUKalendar()):
+            if (calendar.upisiTerminUKalendar(self.pocetno_vrijeme,self.pocetno_vrijeme)):
+                self.posaljiPorukuAgentima("potvrda")
                 return True
             else:
                 return False
@@ -180,57 +188,118 @@ class KlijentAgent(Agent):
     Agent klijent
     '''
 
+
     google_client_id = ""
     google_client_secret = ""
     google_client_username = ""
 
     class PrimiTerminSastanka(Behaviour):
 
+        ime_agenta = ""
+
+        pocetno_vrijeme = ""
+        zavrsno_vrijeme = ""
+
         google_client_id = ""
         google_client_secret = ""
         google_client_username = ""
 
-        def setGoogleAccountPodatke(self, id, secret, user):
+        def setGoogleAccountPodatke(self, id, secret, user, ime):
             self.google_client_id = id
             self.google_client_secret = secret
             self.google_client_username = user
+            self.ime_agenta = ime
 
         def _process(self):
             self.msg = None
             self.msg = self._receive(True)
             if self.msg:
-                print "Ja sam agent klijent " + self.name + "Primio sam poruku %s!" % self.msg.content
+                print "\nAgent " + self.ime_agenta + " : primio sam poruku :  %s " % self.msg.content
 
                 if self.msg.content == "stop":
-                    print "Agent " + self.getName() + " se gasi."
+                    print "Agent " + self.ime_agenta + ": gasim se"
                     self.MyAgent._kill()
+                if self.msg.content == "potvrda":
+
+                    calendar = GoogleCalendar()
+                    calendar.upisiTerminUKalendar(self.pocetno_vrijeme,self.zavrsno_vrijeme)
 
                 else:
-                    print "Kontaktiram Google Calendar ! "
+                    print "\nAgent " + self.ime_agenta +" : kontaktiram Google Calendar ! "
                     vremena = self.msg.content.split("'")
 
-                    pocetno_vrijeme = vremena[1]
-                    zavrsno_vrijeme = vremena[3]
+                    self.pocetno_vrijeme = vremena[1]
+                    self.zavrsno_vrijeme = vremena[3]
 
-                    rezultat = self.evaluirajPrijedlog(pocetno_vrijeme, zavrsno_vrijeme)
+                    rezultat = self.evaluirajPrijedlog(self.pocetno_vrijeme, self.zavrsno_vrijeme)
                     self.posaljiOdgovor(rezultat)
             else:
-                print "Čekao sam ali nema poruke"
+                print "\nAgent " + self.ime_agenta +" : čekao sam ali nema poruke"
 
 
-        # Metoda koja poziva klasu GoogleCalendar u kojoj kontaktiramo Google-Calendar-API
         def evaluirajPrijedlog(self, pocetno_vrijeme, zavrsno_vrijeme):
-            print "Evaluiram prijedlog..."
+            '''
+            Metoda koja poziva klasu GoogleCalendar u kojoj kontaktiramo Google-Calendar-API
+            Provjerava da li je određeni termin slobodan i ukoliko je vraća "ok"
+            Ako termin nije slobodan tada provjerava kada u tom danu postoji
+            slobodan vremenski prostor određenog raspona
+            '''
+
+            print "\nAgent " + self.ime_agenta +" : evaluiram prijedlog..."
             calendar = GoogleCalendar(self.google_client_id, self.google_client_secret, self.google_client_username)
             if (calendar.main(pocetno_vrijeme, zavrsno_vrijeme)):
-                return "ok"
+                return "Termin je u redu"
 
             else:
-                print "raspored zauzet"
-                return "fail"
+                print "\nAgent " + self.ime_agenta +" : tražim slobodan vremenski okvir"
+
+                #racunanje potrebnog trajanja slobodnog vremenskog okvira
+                pocetni_sat =  int(pocetno_vrijeme.split("T")[1].split(":")[0])
+                zavrsni_sat = int(zavrsno_vrijeme.split("T")[1].split(":")[0])
+                trajanje = zavrsni_sat-pocetni_sat
+                pocetni_sat +=1
+
+                #if trajanje >= 12:
+                #        print "\nAgent " + self.ime_agenta +" : Danas je nemoguće pronaći slobodnog vremena"
+
+                #tražimo slobodan vremenski okvir
+                #else:
+                while zavrsni_sat <= 23:
+                        print "Tražim..."
+                        zavrsni_sat = pocetni_sat + trajanje
+
+                        if zavrsni_sat == 24 : return "Ne odgovara mi termin"
+                        pocetak_godina =  pocetno_vrijeme.split("-")[0]
+                        pocetak_mjesec =  pocetno_vrijeme.split("-")[1]
+                        pocetak_dan =  pocetno_vrijeme.split("-")[2].split("T")[0]
+                        pocetak_minute =  pocetno_vrijeme.split("T")[1].split(":")[1]
+
+                        zavrsetak_godina =  zavrsno_vrijeme.split("-")[0]
+                        zavrsetak_mjesec =  zavrsno_vrijeme.split("-")[1]
+                        zavrsetak_dan =  zavrsno_vrijeme.split("-")[2].split("T")[0]
+                        zavrsetak_minute =  zavrsno_vrijeme.split("T")[1].split(":")[1]
+
+                        if pocetni_sat < 10 :
+                            pocetak_sat = "0%i"%(pocetni_sat)
+                        else:
+                            pocetak_sat = "%i"%(pocetni_sat)
+
+                        if zavrsni_sat < 10 :
+                            zavrsetak_sat = "0%i"%(zavrsni_sat)
+                        else:
+                            zavrsetak_sat = "%i"%(zavrsni_sat)
 
 
-        def posaljiOdgovor(self, rezultat):
+                        pocetno_vrijeme = pocetak_godina + "-" + pocetak_mjesec + "-" + pocetak_dan + "T" + pocetak_sat + ":" + pocetak_minute + ":00.000Z"
+                        zavrsno_vrijeme = zavrsetak_godina + "-" + zavrsetak_mjesec + "-" + str(zavrsetak_dan) + "T" + zavrsetak_sat + ":" + zavrsetak_minute + ":00.000Z"
+
+                        if calendar.main(pocetno_vrijeme, zavrsno_vrijeme):
+                                return  pocetno_vrijeme
+
+                        else :
+                            pocetni_sat +=1
+
+        def posaljiOdgovor(self, odgovor):
 
             primatelj = spade.AID.aid(name="agent_organizator@127.0.0.1",
                                       addresses=["xmpp://agent_organizator@127.0.0.1"])
@@ -240,16 +309,15 @@ class KlijentAgent(Agent):
             self.msg.setOntology("povratna_informacija")
             self.msg.setLanguage("Hrvatski")
             self.msg.addReceiver(primatelj)
-            self.msg.setContent(rezultat)
+            self.msg.setContent(odgovor)
             self.myAgent.send(self.msg)
 
-            print "\nposlao sam poruku agentu organizatoru %s!" % (rezultat)
+            print  "\nAgent " + self.ime_agenta +" : poslao sam poruku agentu organizatoru %s\n!" % (odgovor)
 
 
     def _setup(self):
 
-        print "\n Agent\t" + self.getName() + " je aktivan"
-
+        print "\n Agent\t" + self.getAID().getName() + " je aktivan"
 
         # Prihvaćanje poruke sa predloškom - ontologija
         feedback_template = ACLTemplate()
@@ -257,7 +325,7 @@ class KlijentAgent(Agent):
         mt = MessageTemplate(feedback_template)
         termin = self.PrimiTerminSastanka()
         self.addBehaviour(termin, mt)
-        termin.setGoogleAccountPodatke(self.google_client_id, self.google_client_secret, self.google_client_username)
+        termin.setGoogleAccountPodatke(self.google_client_id, self.google_client_secret, self.google_client_username,self.getAID().getName())
 
 
     def setGoogleAccountPodatke(self, id, secret, user):

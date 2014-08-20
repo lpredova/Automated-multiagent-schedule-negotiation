@@ -43,8 +43,6 @@ class GoogleCalendar:
       self.client_name = cli_name
 
     def main(self,pocetno_vrijeme,zavrsno_vrijeme):
-        print "evaluacija krece..."
-
         flow = OAuth2WebServerFlow(self.client_id, self.client_secret, self.scope)
 
         storage = Storage('credentials.dat')
@@ -91,7 +89,9 @@ class GoogleCalendar:
 
 
 
-    def upisiTerminUKalendar(self):
+    def upisiTerminUKalendar(self,pocetno_vrijeme,zavrsno_vrijeme):
+
+        print  "pocetno : " + pocetno_vrijeme + " zavrsno : " + zavrsno_vrijeme
         print " ovdje cete upisivati detalje sastanka koje cemo onda ubacivati u google calendar"
 
 
