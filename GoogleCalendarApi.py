@@ -89,10 +89,71 @@ class GoogleCalendar:
 
 
 
-    def upisiTerminUKalendar(self,pocetno_vrijeme,zavrsno_vrijeme):
+    def upisiTerminUKalendar(self,pocetno_vrijeme,zavrsno_vrijeme,naziv,lokacija):
 
-        print  "pocetno : " + pocetno_vrijeme + " zavrsno : " + zavrsno_vrijeme
-        print " ovdje cete upisivati detalje sastanka koje cemo onda ubacivati u google calendar"
+        print lokacija
+        print naziv
+
+        print self.client_name
+
+        flow = OAuth2WebServerFlow(self.client_id, self.client_secret, self.scope)
+
+        storage = Storage('credentials.dat')
+        credentials = storage.get()
+
+        if credentials is None or credentials.invalid:
+            credentials = run(flow, storage)
+
+        http = httplib2.Http()
+        http = credentials.authorize(http)
+
+        service = build('calendar', 'v3', http=http)
+
+        pocetno_vrijeme = pocetno_vrijeme.split("Z")[0]+"-00:00"
+        zavrsno_vrijeme = zavrsno_vrijeme.split("Z")[0]+"-00:00"
+
+        print zavrsno_vrijeme[23]
 
 
-        return True
+        event = {
+                      "end":
+                      {
+                        "dateTime": zavrsno_vrijeme
+                      },
+                      "start":
+                      {
+                        "dateTime": pocetno_vrijeme
+                      },
+                      "attendees":
+                      [
+                        {
+                          "email": "lovro.predovan@gmail.com"
+                        },
+                        {
+                          "email": "agent01.zavrsni@gmail.com"
+                        },
+                        {
+                          "email": "agent02.zavrsni@gmail.com"
+                        },
+                        {
+                          "email": "agent03.zavrsni@gmail.com"
+                        }
+                      ],
+                      "summary": naziv,
+                      "location": lokacija
+                }
+
+        print event
+
+        try:
+            created_event = service.events().insert(calendarId='primary', body=event).execute()
+
+            print created_event['id']
+            print created_event['status']
+            print "Kreirani dogadjaj : " + created_event['htmlLink']
+            return True
+
+        except:
+            print "Nije uspilo zapisat u kalendar"
+
+            return False

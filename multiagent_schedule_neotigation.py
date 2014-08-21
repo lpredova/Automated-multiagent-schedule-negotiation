@@ -1,13 +1,16 @@
+# coding=utf-8
+# coding=utf-8
+__author__ = 'lovro'
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import spade
 import time
 import threading
-from os import system
 from GoogleCalendarApi import GoogleCalendar
 from spade.Agent import Agent
-from spade.Behaviour import Behaviour,OneShotBehaviour, EventBehaviour, ACLTemplate, MessageTemplate
+from spade.Behaviour import Behaviour,ACLTemplate, MessageTemplate
 from spade.ACLMessage import ACLMessage
 
 class OrganizatorAgent(Agent):
@@ -19,6 +22,7 @@ class OrganizatorAgent(Agent):
         '''
         Klasa za primanje poruke od agenata klijenata
         '''
+        brojac_krugova_pregovora = 0
 
         pocetno_vrijeme = ""
         zavrsno_vrijeme = ""
@@ -46,34 +50,44 @@ class OrganizatorAgent(Agent):
                             if self.upisiTerminUKalendar():
                                 print "Termin sastanka upisan u kalendar donji"
                                 #ToDo ovdje ovo pametnije rijesiti nekako
-                                self.izbornik_odabir ="0"
-                                self.prikaziIzbornik()
+
+                                calendar = GoogleCalendar()
+                                calendar.upisiTerminUKalendar(self.pocetno_vrijeme,self.zavrsno_vrijeme)
+
+                                #self.izbornik_odabir ="0"
+                                #self.prikaziIzbornik()
 
                             else:
                                 print "Nije upisano donji"
                                 self.izbornik_odabir ="0"
                                 self.prikaziIzbornik()
 
-                        if x != "ok":
+                        if x != "Termin je u redu":
                             self.brojac_odgovora = 0
                             del self.odgovori[:]
 
                             print "\nNema dogovora , nova runda pregovora slijedi!!!"
                             self.izbornik_odabir ="0"
                             self.prikaziIzbornik()
-
             else:
                 print self.msg
                 print "Agent organizator : Čekao sam ali nema poruke"
                 self.prikaziIzbornik()
 
         def prikaziIzbornik(self):
+
+            if self.brojac_krugova_pregovora == 10:
+                print "Dogovor nije postignut u 10 krugova pregovora"
+                return 0
+
             while self.izbornik_odabir=="0":
+                print "%i. krug pregovora" %(self.brojac_krugova_pregovora+1)
                 self.izbornik_odabir = raw_input(
                     "\n1)Predlozi sastanak\n2)Odustani od pregovaranja\n\nOdabir:")
 
                 if self.izbornik_odabir == "1":
                     self.brojac_odgovora = 0
+                    self.brojac_krugova_pregovora +=1
                     self.odgovori = []
                     vrijeme = self.odrediVrijemeSastanka()
                     self.posaljiPorukuAgentima(vrijeme)
@@ -83,7 +97,7 @@ class OrganizatorAgent(Agent):
                     self.posaljiPorukuAgentima("stop")
                     self.MyAgent._kill
 
-                if(self.izbornik_odabir!="1" or self.izbornik_odabir!="2"):self.izbornik_odabir=="0"
+                self.izbornik_odabir=="0"
 
 
         def odrediVrijemeSastanka(self):
@@ -152,13 +166,29 @@ class OrganizatorAgent(Agent):
             :return:
             '''
 
-            print "Sastanak uspješno dogovoren...\nUnosim u kalendar..."
-            calendar = GoogleCalendar()
-            if (calendar.upisiTerminUKalendar(self.pocetno_vrijeme,self.pocetno_vrijeme)):
-                self.posaljiPorukuAgentima("potvrda")
-                return True
-            else:
-                return False
+            print "Sastanak uspješno dogovoren..."
+
+            izbor = 0
+
+            while(izbor!=1 or izbor!=2):
+                izbor = input("Želite li dogovoreni sastanak upisati u kalendar ?\n1)Dodaj u kalendar\n2)Odustani")
+                if izbor == 1:
+                    calendar = GoogleCalendar()
+                    lokacija = raw_input("\nUnesite lokaciju sastanka:")
+                    naziv = raw_input("Naziv sastanka sastanka:")
+
+                    if calendar.upisiTerminUKalendar(self.pocetno_vrijeme,self.pocetno_vrijeme,lokacija,naziv):
+
+                        return True
+                    else:
+                        print "nece"
+                        return False
+
+                if izbor == 2:
+                    print "Dodavanje događaja otkazano !"
+                    self.prikaziIzbornik()
+
+
 
     def _setup(self):
         '''
@@ -188,10 +218,12 @@ class KlijentAgent(Agent):
     google_client_secret = ""
     google_client_username = ""
 
+    ne_preferirani_termini = ""
+
     class PrimiTerminSastanka(Behaviour):
 
+        calendar  =""
         ime_agenta = ""
-
         pocetno_vrijeme = ""
         zavrsno_vrijeme = ""
 
@@ -199,25 +231,36 @@ class KlijentAgent(Agent):
         google_client_secret = ""
         google_client_username = ""
 
-        def setGoogleAccountPodatke(self, id, secret, user, ime):
+        ne_preferirani_termini = ""
+
+        def setGoogleAccountPodatke(self, id, secret, user, ime , termini):
             self.google_client_id = id
             self.google_client_secret = secret
             self.google_client_username = user
             self.ime_agenta = ime
+            self.ne_preferirani_termini =  termini
+
+            self.calendar = GoogleCalendar(self.google_client_id, self.google_client_secret, self.google_client_username)
 
         def _process(self):
             self.msg = None
             self.msg = self._receive(True)
             if self.msg:
                 print "\nAgent " + self.ime_agenta + " : primio sam poruku :  %s " % self.msg.content
+                print self.msg.content.split("'")[1]
 
                 if self.msg.content == "stop":
                     print "Agent " + self.ime_agenta + ": gasim se"
                     self.MyAgent._kill()
-                if self.msg.content == "potvrda":
 
-                    calendar = GoogleCalendar()
-                    calendar.upisiTerminUKalendar(self.pocetno_vrijeme,self.zavrsno_vrijeme)
+                #if self.msg.content.split("'")[1] == "potvrda":
+                if self.msg.content == "potvrda":
+                    print "Agent " + self.ime_agenta + ": Sastanak potvrđen -\tgasim se"
+                    self.MyAgent._kill()
+
+                    #lokacija = self.msg.content.split("'")[3]
+                    #naziv = self.msg.content.split("'")[5]
+                    #self.calendar.upisiTerminUKalendar(self.pocetno_vrijeme,self.zavrsno_vrijeme,lokacija,naziv)
 
                 else:
                     print "\nAgent " + self.ime_agenta +" : kontaktiram Google Calendar ! "
@@ -235,15 +278,28 @@ class KlijentAgent(Agent):
         def evaluirajPrijedlog(self, pocetno_vrijeme, zavrsno_vrijeme):
             '''
             Metoda koja poziva klasu GoogleCalendar u kojoj kontaktiramo Google-Calendar-API
-            Provjerava da li je određeni termin slobodan i ukoliko je vraća "ok"
+            Provjerava da li je određeni termin slobodan i ukoliko je vraća "Termin je u redu"
+            Također nije dovoljno da je sam termin slobodan već se provjerava i korisnikova preferencija određenog
+            termina tako da nije dobovoljno samo da je termin slobodan već i da agent želi uzeti taj termin
             Ako termin nije slobodan tada provjerava kada u tom danu postoji
             slobodan vremenski prostor određenog raspona
             '''
 
             print "\nAgent " + self.ime_agenta +" : evaluiram prijedlog..."
-            calendar = GoogleCalendar(self.google_client_id, self.google_client_secret, self.google_client_username)
-            if (calendar.main(pocetno_vrijeme, zavrsno_vrijeme)):
-                return "Termin je u redu"
+
+            if (self.calendar.main(pocetno_vrijeme, zavrsno_vrijeme)):
+                print self.ne_preferirani_termini
+
+                ne_preferirani_pocetak  = int(self.ne_preferirani_termini[0].split(":")[0])
+                ne_preferirani_zavrsetak  = int(self.ne_preferirani_termini[1].split(":")[0])
+                pocetni_sat =  int(pocetno_vrijeme.split("T")[1].split(":")[0])
+                zavrsni_sat = int(zavrsno_vrijeme.split("T")[1].split(":")[0])
+
+                #ToDo moguće poboljsanje
+                if(pocetni_sat < ne_preferirani_pocetak and ne_preferirani_zavrsetak < zavrsni_sat):
+                    return "Mogu ali necu"
+
+                else: return "Termin je u redu"
 
             else:
                 print "\nAgent " + self.ime_agenta +" : tražim slobodan vremenski okvir"
@@ -288,7 +344,7 @@ class KlijentAgent(Agent):
                         pocetno_vrijeme = pocetak_godina + "-" + pocetak_mjesec + "-" + pocetak_dan + "T" + pocetak_sat + ":" + pocetak_minute + ":00.000Z"
                         zavrsno_vrijeme = zavrsetak_godina + "-" + zavrsetak_mjesec + "-" + str(zavrsetak_dan) + "T" + zavrsetak_sat + ":" + zavrsetak_minute + ":00.000Z"
 
-                        if calendar.main(pocetno_vrijeme, zavrsno_vrijeme):
+                        if self.calendar.main(pocetno_vrijeme, zavrsno_vrijeme):
                                 return  pocetno_vrijeme
 
                         else :
@@ -320,13 +376,14 @@ class KlijentAgent(Agent):
         mt = MessageTemplate(feedback_template)
         termin = self.PrimiTerminSastanka()
         self.addBehaviour(termin, mt)
-        termin.setGoogleAccountPodatke(self.google_client_id, self.google_client_secret, self.google_client_username,self.getAID().getName())
+        termin.setGoogleAccountPodatke(self.google_client_id, self.google_client_secret, self.google_client_username,self.getAID().getName(),self.ne_preferirani_termini)
 
 
-    def setGoogleAccountPodatke(self, id, secret, user):
+    def setGoogleAccountPodatke(self, id, secret, user , termini):
         self.google_client_id = id
         self.google_client_secret = secret
         self.google_client_username = user
+        self.ne_preferirani_termini = termini
 
 
 def inicijalizirajAgentaOrganizatora(i):
@@ -350,25 +407,30 @@ def inicijalizirajAgentaKlijenta(i):
     :return: Agenti klijenti
     '''
 
+    #   podaci o svakom posebnom agentu, njegovi google korisnički podaci,pridružena e-mail adresa i vrijeme koje
+    #   korisnik ne preferira odnosno iz nekog razloga ne želi da se sastanak održi baš u to vrijeme,
+    #   sastoji se od početnog i završnog vremena perioda za koje ne želimo uznemiravati korisnika
+
     google_korisnici = {
     "2": ["466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com", "g7S6psNxN9tw7PmpILxIsxzw",
-          "agent0.zavrsni@gmail.com"],
+          "agent0.zavrsni@gmail.com",["12:00","13:00"]],
     "3": ["969348362348-nfs15alf9velcc7dr5312cebijs66cp4.apps.googleusercontent.com", "8Zt_4PsA_JpGGnmFO1PDETj3",
-          "agent01.zavrsni@gmail.com"],
+          "agent01.zavrsni@gmail.com",["08:00","08:45"]],
     "4": ["111267856009-qj1ravtgqptrlpb9nl83at347vhkgkpd.apps.googleusercontent.com", "8Zt_4PsA_JpGGnmFO1PDETj3",
-          "agent02.zavrsni@gmail.com"],
+          "agent02.zavrsni@gmail.com",["07:30","08:30"]],
     "5": ["485027726364-fgf7ng6oa671uti4lhv0ugsccilgln97.apps.googleusercontent.com", "d4UqsL3DF0sPZy2fxspKuvr_",
-          "agent03.zavrsni@gmail.com"]}
+          "agent03.zavrsni@gmail.com",["05:00","10:00"]]}
 
     id = google_korisnici["%i" % (i)][0]
     secret = google_korisnici["%i" % (i)][1]
     user = google_korisnici["%i" % (i)][2]
+    termini = google_korisnici["%i" % (i)][3]
 
     ip = "agent_klijent%i@127.0.0.1" % (i)
     korisnik = "klijent_0%i" % (i)
     k = KlijentAgent(ip, korisnik)
     k.start()
-    k.setGoogleAccountPodatke(id, secret, user)
+    k.setGoogleAccountPodatke(id, secret, user,termini)
 
 if __name__ == '__main__':
 

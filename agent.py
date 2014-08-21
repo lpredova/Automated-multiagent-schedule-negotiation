@@ -1,12 +1,3 @@
-__author__ = 'lovro'
+test = "['potvrda', 'Zagreb', 'Test']"
 
-
-class HelperAgent():
-
-    def __init__(self):return "inicijacija"
-
-    def unesiVrijemeSastanka(self):
-        print "Unesite vreme"
-
-
-
+print test.split("'")[5]
