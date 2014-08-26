@@ -148,8 +148,6 @@ class GoogleCalendar:
         try:
             created_event = service.events().insert(calendarId='primary', body=event).execute()
 
-            print created_event['id']
-            print created_event['status']
             print "Kreirani dogadjaj : " + created_event['htmlLink']
             return True
 
