@@ -33,7 +33,7 @@ class OrganizatorAgent(Agent):
             self.prikaziIzbornik()
 
             self.msg = None
-            self.msg = self._receive(True,10)
+            self.msg = self._receive(True)
             if self.msg:
 
                 print "Agent organizator : primio sam poruku od klijenta"
@@ -66,7 +66,7 @@ class OrganizatorAgent(Agent):
                 return 0
 
             while self.izbornik_odabir=="0":
-                print "%i. krug pregovora" %(self.brojac_krugova_pregovora+1)
+                print "\n\n%i. krug pregovora" %(self.brojac_krugova_pregovora+1)
                 self.izbornik_odabir = raw_input(
                     "\n1)Predlozi sastanak\n2)Odustani od pregovaranja\n\nOdabir:")
 
@@ -115,7 +115,6 @@ class OrganizatorAgent(Agent):
             return vremena_sastanka
 
         def posaljiPorukuAgentima(self, poruka):
-
             i = 1
             while (i < 5):
                 i += 1
@@ -173,6 +172,7 @@ class OrganizatorAgent(Agent):
 
                 if izbor == 2:
                     print "Dodavanje događaja otkazano !"
+                    self.izbornik_odabir = 0
                     self.prikaziIzbornik()
 
 
@@ -245,7 +245,6 @@ class KlijentAgent(Agent):
             self.msg = self._receive(True)
             if self.msg:
                 print "\nAgent " + self.ime_agenta + " : primio sam poruku :  %s " % self.msg.content
-                print self.msg.content.split("'")[1]
 
                 if self.msg.content == "stop":
                     print "Agent " + self.ime_agenta + ": gasim se"
@@ -271,158 +270,102 @@ class KlijentAgent(Agent):
 
 
         def evaluirajPrijedlog(self, pocetno_vrijeme, zavrsno_vrijeme,trajanje):
-            '''
-            Metoda koja poziva klasu GoogleCalendar u kojoj kontaktiramo Google-Calendar-API
-            Provjerava da li je određeni termin slobodan i ukoliko je vraća "Termin je u redu"
-            Također nije dovoljno da je sam termin slobodan već se provjerava i korisnikova preferencija određenog
-            termina tako da nije dobovoljno samo da je termin slobodan već i da agent želi uzeti taj termin
-            Ako termin nije slobodan tada provjerava kada u tom danu postoji
-            slobodan vremenski prostor određenog raspona
-            '''
-
-            print "\nAgent " + self.ime_agenta +" : evaluiram prijedlog..."
+            print "\nAgent " + self.ime_agenta.split(" ")[0] +" : evaluiram prijedlog..."
 
 
-            #parsanje datuma da mozemo sloziti novi datum(e)
-            pocetak_godina =  pocetno_vrijeme.split("-")[0]
-            pocetak_mjesec =  pocetno_vrijeme.split("-")[1]
-            pocetak_dan =  pocetno_vrijeme.split("-")[2].split("T")[0]
-            zavrsetak_godina =  zavrsno_vrijeme.split("-")[0]
-            zavrsetak_mjesec =  zavrsno_vrijeme.split("-")[1]
-            zavrsetak_dan =  zavrsno_vrijeme.split("-")[2].split("T")[0]
 
-            slobodni_termini = []
-            trajanje_intervala = int(trajanje)
+            try:
+                pocetak_godina =  pocetno_vrijeme.split("-")[0]
+                pocetak_mjesec =  pocetno_vrijeme.split("-")[1]
+                pocetak_dan =  pocetno_vrijeme.split("-")[2].split("T")[0]
+                zavrsetak_godina =  zavrsno_vrijeme.split("-")[0]
+                zavrsetak_mjesec =  zavrsno_vrijeme.split("-")[1]
+                zavrsetak_dan =  zavrsno_vrijeme.split("-")[2].split("T")[0]
 
-            #fiksni kraj vremenskog intervala
-            fiksni_zavrsni_sat = int(zavrsno_vrijeme.split("T")[1].split(":")[0])
-            fiksne_zavrsne_min = int(zavrsno_vrijeme.split("T")[1].split(":")[1])
+                slobodni_termini = []
+                trajanje_intervala = int(trajanje)
 
-            #fiksni pocetak intervala
-            pocetak_intervala_sati =  int(pocetno_vrijeme.split("T")[1].split(":")[0])
-            pocetak_intervala_minute =  int(pocetno_vrijeme.split("T")[1].split(":")[1])
+                fiksni_zavrsni_sat = int(zavrsno_vrijeme.split("T")[1].split(":")[0])
+                fiksne_zavrsne_min = int(zavrsno_vrijeme.split("T")[1].split(":")[1])
 
-            pivot_intervala_sati_prednji = pocetak_intervala_sati
-            pivot_intervala_minute_prednji = pocetak_intervala_minute
+                pocetak_intervala_sati =  int(pocetno_vrijeme.split("T")[1].split(":")[0])
+                pocetak_intervala_minute =  int(pocetno_vrijeme.split("T")[1].split(":")[1])
 
-            ne_preferirani_pocetak  = int(self.ne_preferirani_termini[0].split(":")[0])
-            ne_preferirani_zavrsetak  = int(self.ne_preferirani_termini[1].split(":")[0])
+                pivot_intervala_sati_prednji = pocetak_intervala_sati
+                pivot_intervala_minute_prednji = pocetak_intervala_minute
 
-            if pocetak_intervala_sati < ne_preferirani_pocetak and ne_preferirani_zavrsetak < fiksni_zavrsni_sat: return self.name + ": mogu ali necu"
+                ne_preferirani_pocetak_sati = int(self.ne_preferirani_termini[0].split(":")[0])
+                ne_preferirani_pocetak_minute = int(self.ne_preferirani_termini[0].split(":")[1])
+                ne_preferirani_zavrsetak_sati = int(self.ne_preferirani_termini[1].split(":")[0])
+                ne_preferirani_zavrsetak_minute = int(self.ne_preferirani_termini[1].split(":")[1])
 
-            else:
+
+                print self.name + "ne preferiram pocetak : %i" % ne_preferirani_pocetak_sati
+                print self.name + "ne preferiram pocetak : %i" % ne_preferirani_pocetak_minute
+                print self.name + "ne preferiram zavrsetak : %i" % ne_preferirani_zavrsetak_sati
+                print self.name + "ne preferiram zavrsetak : %i" % ne_preferirani_zavrsetak_minute
+
+                #TODO fale mi sati ovdje !!!
+
+
+
                 while fiksni_zavrsni_sat >= pivot_intervala_sati_prednji and fiksne_zavrsne_min <= pivot_intervala_minute_prednji :
 
-                    pivot_intervala_sati_zadnji = pivot_intervala_sati_prednji
-                    pivot_intervala_minute_zadnji = pivot_intervala_minute_prednji
+                        pivot_intervala_sati_zadnji = pivot_intervala_sati_prednji
+                        pivot_intervala_minute_zadnji = pivot_intervala_minute_prednji
 
 
-                    pivot_intervala_minute_prednji += trajanje_intervala
-                    if pivot_intervala_minute_prednji >= 60 :
-                        pivot_intervala_sati_prednji +=1
-                        pivot_intervala_minute_prednji = 0
+                        if pocetak_intervala_sati <= ne_preferirani_pocetak_sati and \
+                                    ne_preferirani_pocetak_minute <= pivot_intervala_minute_zadnji and \
+                                    ne_preferirani_zavrsetak_sati <= fiksni_zavrsni_sat and \
+                                    ne_preferirani_zavrsetak_minute <= pivot_intervala_minute_prednji:
 
-                    #pocetak intervala za slanje google calendaru
-                    if pivot_intervala_sati_zadnji < 10 :
-                                pocetak_sat = "0%i"%(pivot_intervala_sati_zadnji)
-                    else:
-                                pocetak_sat = "%i"%(pivot_intervala_sati_zadnji)
-
-                    if pivot_intervala_minute_zadnji < 10:
-                                pocetak_minute = "0%i"%(pivot_intervala_minute_zadnji)
-                    else:
-                                pocetak_minute = "%i"%(pivot_intervala_minute_zadnji)
+                                slobodni_termini.append("blokirani termin !")
+                                print "blokirani termin"
+                                break
 
 
-                    #kraj intervala za slanje google calendaru
-                    if pivot_intervala_sati_prednji < 10 :
-                                zavrsetak_sat = "0%i"%(pivot_intervala_sati_prednji )
-                    else:
-                                zavrsetak_sat = "%i"%(pivot_intervala_sati_prednji )
 
-                    if pivot_intervala_minute_prednji < 10 :
-                                zavrsetak_minute = "0%i"%(pivot_intervala_minute_prednji )
-                    else:
-                                zavrsetak_minute = "%i"%(pivot_intervala_minute_prednji )
+                        pivot_intervala_minute_prednji += trajanje_intervala
+                        if pivot_intervala_minute_prednji >= 60 :
+                            pivot_intervala_sati_prednji +=1
+                            pivot_intervala_minute_prednji = 0
 
-                    pocetno_vrijeme = pocetak_godina + "-" + pocetak_mjesec + "-" + pocetak_dan + "T" + pocetak_sat + ":" + pocetak_minute + ":00.000Z"
-                    zavrsno_vrijeme = zavrsetak_godina + "-" + zavrsetak_mjesec + "-" + str(zavrsetak_dan) + "T" + zavrsetak_sat + ":" + zavrsetak_minute + ":00.000Z"
+                        if pivot_intervala_sati_zadnji < 10 :
+                                    pocetak_sat = "0%i"%(pivot_intervala_sati_zadnji)
+                        else:
+                                    pocetak_sat = "%i"%(pivot_intervala_sati_zadnji)
 
-                    print self.name + ": računam slobodno vrijeme..."
+                        if pivot_intervala_minute_zadnji < 10:
+                                    pocetak_minute = "0%i"%(pivot_intervala_minute_zadnji)
+                        else:
+                                    pocetak_minute = "%i"%(pivot_intervala_minute_zadnji)
 
-                    try:
-                        if self.calendar.main(pocetno_vrijeme,zavrsno_vrijeme):
-                            slobodni_termini.append(pocetno_vrijeme)
-                    except:
-                        continue
+                        if pivot_intervala_sati_prednji < 10 :
+                                    zavrsetak_sat = "0%i"%(pivot_intervala_sati_prednji )
+                        else:
+                                    zavrsetak_sat = "%i"%(pivot_intervala_sati_prednji )
+
+                        if pivot_intervala_minute_prednji < 10 :
+                                    zavrsetak_minute = "0%i"%(pivot_intervala_minute_prednji )
+                        else:
+                                    zavrsetak_minute = "%i"%(pivot_intervala_minute_prednji )
+
+                        pocetno_vrijeme = pocetak_godina + "-" + pocetak_mjesec + "-" + pocetak_dan + "T" + pocetak_sat + ":" + pocetak_minute + ":00.000Z"
+                        zavrsno_vrijeme = zavrsetak_godina + "-" + zavrsetak_mjesec + "-" + str(zavrsetak_dan) + "T" + zavrsetak_sat + ":" + zavrsetak_minute + ":00.000Z"
+
+                        print self.name + ": računam slobodno vrijeme..."
+
+                        try:
+                            if self.calendar.main(pocetno_vrijeme,zavrsno_vrijeme):
+                                    slobodni_termini.append(pocetno_vrijeme)
+                        except: continue
 
                 return slobodni_termini
 
-                """
-                #staro
-                if (self.calendar.main(pocetno_vrijeme, zavrsno_vrijeme)):
-                    print self.ne_preferirani_termini
+            except:
+                return "Greška prilikom evaluacije termina"
 
-                    ne_preferirani_pocetak  = int(self.ne_preferirani_termini[0].split(":")[0])
-                    ne_preferirani_zavrsetak  = int(self.ne_preferirani_termini[1].split(":")[0])
-                    pocetni_sat =  int(pocetno_vrijeme.split("T")[1].split(":")[0])
-                    zavrsni_sat = int(zavrsno_vrijeme.split("T")[1].split(":")[0])
-
-                    #ToDo moguće poboljsanje
-                    if(pocetni_sat < ne_preferirani_pocetak and ne_preferirani_zavrsetak < zavrsni_sat):
-                        return "Mogu ali necu"
-
-                    else: return "Termin je u redu"
-
-                else:
-                    print "\nAgent " + self.ime_agenta +" : tražim slobodan vremenski okvir"
-
-                    #racunanje potrebnog trajanja slobodnog vremenskog okvira
-                    pocetni_sat =  int(pocetno_vrijeme.split("T")[1].split(":")[0])
-                    zavrsni_sat = int(zavrsno_vrijeme.split("T")[1].split(":")[0])
-                    trajanje = zavrsni_sat-pocetni_sat
-                    pocetni_sat +=1
-
-                    #if trajanje >= 12:
-                    #        print "\nAgent " + self.ime_agenta +" : Danas je nemoguće pronaći slobodnog vremena"
-
-                    #tražimo slobodan vremenski okvir
-                    #else:
-                    while zavrsni_sat <= 23:
-                            print "Tražim..."
-                            zavrsni_sat = pocetni_sat + trajanje
-
-                            if zavrsni_sat == 24 : return "Ne odgovara mi termin"
-                            pocetak_godina =  pocetno_vrijeme.split("-")[0]
-                            pocetak_mjesec =  pocetno_vrijeme.split("-")[1]
-                            pocetak_dan =  pocetno_vrijeme.split("-")[2].split("T")[0]
-                            pocetak_minute =  pocetno_vrijeme.split("T")[1].split(":")[1]
-
-                            zavrsetak_godina =  zavrsno_vrijeme.split("-")[0]
-                            zavrsetak_mjesec =  zavrsno_vrijeme.split("-")[1]
-                            zavrsetak_dan =  zavrsno_vrijeme.split("-")[2].split("T")[0]
-                            zavrsetak_minute =  zavrsno_vrijeme.split("T")[1].split(":")[1]
-
-                            if pocetni_sat < 10 :
-                                pocetak_sat = "0%i"%(pocetni_sat)
-                            else:
-                                pocetak_sat = "%i"%(pocetni_sat)
-
-                            if zavrsni_sat < 10 :
-                                zavrsetak_sat = "0%i"%(zavrsni_sat)
-                            else:
-                                zavrsetak_sat = "%i"%(zavrsni_sat)
-
-
-                            pocetno_vrijeme = pocetak_godina + "-" + pocetak_mjesec + "-" + pocetak_dan + "T" + pocetak_sat + ":" + pocetak_minute + ":00.000Z"
-                            zavrsno_vrijeme = zavrsetak_godina + "-" + zavrsetak_mjesec + "-" + str(zavrsetak_dan) + "T" + zavrsetak_sat + ":" + zavrsetak_minute + ":00.000Z"
-
-                            if self.calendar.main(pocetno_vrijeme, zavrsno_vrijeme):
-                                    return  pocetno_vrijeme
-
-                            else :
-                                pocetni_sat +=1
-                    """
 
         def posaljiOdgovor(self, odgovor):
 
@@ -444,7 +387,6 @@ class KlijentAgent(Agent):
 
         print "\n Agent\t" + self.getAID().getName() + " je aktivan"
 
-        # Prihvaćanje poruke sa predloškom - ontologija
         feedback_template = ACLTemplate()
         feedback_template.setOntology("termin_sastanka")
         mt = MessageTemplate(feedback_template)
@@ -461,11 +403,6 @@ class KlijentAgent(Agent):
 
 
 def inicijalizirajAgentaOrganizatora(i):
-    '''
-    Metoda za inicijalizaciju agenta organizatora
-    :param i:
-    :return: Agent organizator
-    '''
     ip = "agent_organizator@127.0.0.%i" % (i)
     korisnik = "organizator"
 
@@ -474,16 +411,6 @@ def inicijalizirajAgentaOrganizatora(i):
 
 
 def inicijalizirajAgentaKlijenta(i):
-    '''
-    Metoda za inicijalizaciju agenata klijenata
-    i korisnicki podaci agenata klijenata za uslugu Google Calendar
-    :param i:
-    :return: Agenti klijenti
-    '''
-
-    #   podaci o svakom posebnom agentu, njegovi google korisnički podaci,pridružena e-mail adresa i vrijeme koje
-    #   korisnik ne preferira odnosno iz nekog razloga ne želi da se sastanak održi baš u to vrijeme,
-    #   sastoji se od početnog i završnog vremena perioda za koje ne želimo uznemiravati korisnika
 
     google_korisnici = {
     "2": ["466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com", "g7S6psNxN9tw7PmpILxIsxzw",
@@ -493,7 +420,7 @@ def inicijalizirajAgentaKlijenta(i):
     "4": ["111267856009-qj1ravtgqptrlpb9nl83at347vhkgkpd.apps.googleusercontent.com", "8Zt_4PsA_JpGGnmFO1PDETj3",
           "agent02.zavrsni@gmail.com",["07:30","08:30"]],
     "5": ["485027726364-fgf7ng6oa671uti4lhv0ugsccilgln97.apps.googleusercontent.com", "d4UqsL3DF0sPZy2fxspKuvr_",
-          "agent03.zavrsni@gmail.com",["05:00","10:00"]]}
+          "agent03.zavrsni@gmail.com",["16:00","19:00"]]}
 
     id = google_korisnici["%i" % (i)][0]
     secret = google_korisnici["%i" % (i)][1]
