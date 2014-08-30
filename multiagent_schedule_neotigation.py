@@ -2,7 +2,6 @@
 __author__ = 'lovro'
 
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import spade
 import time
@@ -34,42 +33,37 @@ class OrganizatorAgent(Agent):
 
             if self.msg:
 
-                print "Agent organizator : primio sam poruku od klijenta"
+                print "\nAgent organizator : " + str(self.brojac_odgovora) + " /4 poruka primljeno"
                 self.brojac_odgovora += 1
                 self.odgovori.append(self.msg.content)
 
-                print str(self.brojac_odgovora) + "/4 poruka primljeno"
-
                 if self.brojac_odgovora % 4 == 0:
-                    agenti = ["agent03.zavrsni@gmail.com", "agent02.zavrsni@gmail.com",
-                              "agent01.zavrsni@gmail.com", "agent0.zavrsni@gmail.com", ]
 
-                    while self.brojac_odgovora != 0:
-                        print agenti[self.brojac_odgovora - 1] + " termini koji mi odgovaraju : " + self.odgovori[
-                            self.brojac_odgovora - 1]
-                        self.brojac_odgovora -= 1
+                    for x in range(0, 4):
+                        print self.odgovori[x]
 
                     termin = self.nadjiNajboljiTermin()
 
                     if termin == "":
                         self.brojac_odgovora = 0
                         del self.odgovori[:]
-                        print "Ne može se odrediti termin sastanka s tim vremenom, molimo predložite novi termin"
+                        print "\nNe može se odrediti najbolji termin sastanka s tim vremenom." \
+                              "\nMolimo predložite novi termin !"
                         self.izbornik()
 
                     else:
-                        print "Najbolji termin je : " + termin
+                        print "\nNajbolji termin je : " + termin
                         self.upisiTerminUKalendar(termin)
 
             else:
                 print self.msg
-                print "Agent organizator : Čekao sam ali nema poruke"
+                print "\nAgent organizator : Čekao sam ali nema poruke"
                 self.prikaziIzbornik()
 
         def prikaziIzbornik(self):
 
             if self.brojac_krugova_pregovora == 10:
-                print "Dogovor nije postignut u 10 krugova pregovora"
+                print "\nDogovor nije postignut u 10 krugova pregovora"
                 self.zaustaviAgenta()
             self.izbornik()
 
@@ -112,7 +106,7 @@ class OrganizatorAgent(Agent):
             sat_kraj = raw_input("zavrsni sat (hh)      : ")
             minute_kraj = raw_input("zavrsne minute (mm)        : ")
 
-            self.trajanje_dogadjaja = raw_input("trajanje događaja (min)        : ")
+            self.trajanje_dogadjaja = raw_input("\ntrajanje događaja (min)        : ")
             self.pocetno_vrijeme = godina_pocetak + "-" + mjesec_pocetak + "-" + dan_pocetak + "T" + sat_pocetak + ":" + minute_pocetak + ":00.000Z"
             self.zavrsno_vrijeme = godina_kraj + "-" + mjesec_kraj + "-" + dan_kraj + "T" + sat_kraj + ":" + minute_kraj + ":00.000Z"
             vremena_sastanka = [self.pocetno_vrijeme, self.zavrsno_vrijeme, self.trajanje_dogadjaja]
@@ -145,13 +139,8 @@ class OrganizatorAgent(Agent):
                 element = self.odgovori[x]
                 if element == "[]":
                     return ""
-                    #return "Ne može se odrediti termin sastanka s tim vremenom, molimo predložite novi termin"
 
                 redak = element.translate(None, '[]').split(",")
-
-                # print redak
-                #print "redak elemenata %i"%x
-
                 for l in range(0, len(redak)):
 
                     #print "uzeli smo sada : " + redak[l]
@@ -162,20 +151,15 @@ class OrganizatorAgent(Agent):
 
                     for y in range(0, 4):
                         #print "usporedjujem " + redak[l] + " sa %i"%y + ". tim retkom"
-
                         el = self.odgovori[y]
                         red = el.translate(None, '[]').split(",")
                         for k in range(0, len(red)):
-
-                            if "Termin je blokiran" in red[k] :
-                                #print "trebam biti blokiran"
-                                break
-
                             #print "usporedjujem " + redak[l] + " sa " + red[k]
 
                             if redak[l] == red[k]:
                                 pojava += 1
                                 #print pojava
+
                             if pojava == 4:
                                 return redak[l]
 
@@ -185,8 +169,8 @@ class OrganizatorAgent(Agent):
         def upisiTerminUKalendar(self, termin):
 
             izbor = 0
-            while (izbor != 1 or izbor != 2):
-                izbor = input("Želite sastanak s terminom %s upisati u kalendar ?"
+            while izbor != 1 or izbor != 2:
+                izbor = input("\nŽelite sastanak s terminom %s upisati u kalendar ?"
                               "\n1)Dodaj u kalendar"
                               "\n2)Odustani"
                               "\nodabir:" % termin)
@@ -200,6 +184,7 @@ class OrganizatorAgent(Agent):
                         if calendar.upisiTerminUKalendar(pocetno_vrijeme, zavrsno_vrijeme, self.naziv, self.lokacija):
                             print "Događaj je uspješno upisan u kalendar..."
                             self.zaustaviAgenta()
+                            self.izbornik()
 
                     except:
                         print "Dodavanje događaja nije uspjelo !"
@@ -207,8 +192,6 @@ class OrganizatorAgent(Agent):
 
                 if izbor == 2:
                     print "Dodavanje događaja otkazano !"
-                    print self.brojac_odgovora
-
                     self.izbornik_odabir = 0
                     self.izbornik()
                     return
@@ -292,7 +275,6 @@ class KlijentAgent(Agent):
                     self.MyAgent._kill()
 
                 else:
-                    print "\nAgent " + self.ime_agenta + " : kontaktiram Google Calendar ! "
                     vremena = self.msg.content.split("'")
 
                     self.pocetno_vrijeme = vremena[1]
@@ -307,7 +289,7 @@ class KlijentAgent(Agent):
                 self.posaljiOdgovor("Nisam primio poruku")
 
         def evaluirajPrijedlog(self, pocetno_vrijeme, zavrsno_vrijeme, trajanje):
-            print "\nAgent " + self.ime_agenta.split(" ")[0] + " : evaluiram prijedlog..."
+            print "\nAgent " + self.ime_agenta.split(" ")[0] + " : Evaluiram prijedlog za sastankom"
 
             try:
                 pocetak_godina = pocetno_vrijeme.split("-")[0]
@@ -467,13 +449,13 @@ def inicijalizirajAgentaOrganizatora(i):
 def inicijalizirajAgentaKlijenta(i):
     google_korisnici = {
         "2": ["466301455600-rull43ikdhd7d691dtcitufhnlab9nfu.apps.googleusercontent.com", "g7S6psNxN9tw7PmpILxIsxzw",
-              "agent0.zavrsni@gmail.com", ["12:00", "13:00"]],
+              "agent0.zavrsni@gmail.com", ["00:00", "08:00"]],
         "3": ["969348362348-nfs15alf9velcc7dr5312cebijs66cp4.apps.googleusercontent.com", "8Zt_4PsA_JpGGnmFO1PDETj3",
-              "agent01.zavrsni@gmail.com", ["09:00", "9:45"]],
+              "agent01.zavrsni@gmail.com", ["00:00", "06:00"]],
         "4": ["111267856009-qj1ravtgqptrlpb9nl83at347vhkgkpd.apps.googleusercontent.com", "8Zt_4PsA_JpGGnmFO1PDETj3",
-              "agent02.zavrsni@gmail.com", ["09:30", "10:00"]],
+              "agent02.zavrsni@gmail.com", ["22:00", "05:50"]],
         "5": ["485027726364-fgf7ng6oa671uti4lhv0ugsccilgln97.apps.googleusercontent.com", "d4UqsL3DF0sPZy2fxspKuvr_",
-              "agent03.zavrsni@gmail.com", ["16:00", "19:00"]]}
+              "agent03.zavrsni@gmail.com", ["19:00", "23:00"]]}
 
     id = google_korisnici["%i" % (i)][0]
     secret = google_korisnici["%i" % (i)][1]
