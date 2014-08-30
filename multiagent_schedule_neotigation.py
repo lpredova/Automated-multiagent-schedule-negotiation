@@ -33,7 +33,7 @@ class OrganizatorAgent(Agent):
 
             if self.msg:
 
-                print "\nAgent organizator : " + str(self.brojac_odgovora) + " /4 poruka primljeno"
+                print "\nAgent organizator : " + str(self.brojac_odgovora+1) + " /4 poruka primljeno"
                 self.brojac_odgovora += 1
                 self.odgovori.append(self.msg.content)
 
